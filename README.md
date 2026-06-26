@@ -16,7 +16,7 @@ docs/ (.txt, .pdf) → ingest.py (load + chunk) → embed_and_store.py (embed + 
 
 ```bash
 # Install dependencies
-uv sync
+make install    # or: uv sync
 
 # Set your OpenAI API key
 echo 'OPENAI_API_KEY=sk-...' > .env
@@ -26,23 +26,26 @@ mkdir -p docs
 # cp your-documents.pdf docs/
 
 # Ingest documents into the vector store
-uv run python run.py
+make ingest     # or: uv run python run.py --create-db
 
 # Launch the web UI
-uv run python app.py
+make serve      # or: uv run python app.py
 # → http://localhost:7860
 ```
 
 ## Project Structure
 
 ```
-├── app.py              ← Gradio chat UI (main entry point)
-├── run.py              ← Terminal entry point + document ingestion
-├── ingest.py           ← Document loading (txt + pdf) and chunking
-├── embed_and_store.py  ← OpenAI embeddings + ChromaDB storage
-├── rag_chain.py        ← Retrieval, prompt construction, LLM generation, conversation memory
-├── docs/               ← Your .txt and .pdf documents (gitignored)
-├── chroma_db/          ← Vector store (auto-generated, gitignored)
+├── app.py                          ← Gradio chat UI (main entry point)
+├── run.py                          ← Terminal entry point + document ingestion
+├── src/rag_medical/                ← Library package
+│   ├── config.py                   ← All tunable parameters
+│   ├── ingest.py                   ← Document loading (txt + pdf) and chunking
+│   ├── embed_and_store.py          ← OpenAI embeddings + ChromaDB storage
+│   └── rag_chain.py                ← Retrieval, prompt construction, LLM generation, conversation memory
+├── docs/                           ← Your .txt and .pdf documents (gitignored)
+├── chroma_db/                      ← Vector store (auto-generated, gitignored)
+├── Makefile
 ├── pyproject.toml
 └── requirements.txt
 ```
@@ -65,7 +68,7 @@ uv run python app.py
 
 ## Configuration
 
-Key settings in `rag_chain.py`:
+All settings are centralized in `src/rag_medical/config.py`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -73,4 +76,6 @@ Key settings in `rag_chain.py`:
 | `TOP_K` | `4` | Number of chunks retrieved per query |
 | `MAX_HISTORY_TOKENS` | `64000` | Token threshold before conversation summarization |
 
-Chunk size and overlap are configured in `ingest.py` (`chunk_size=500`, `chunk_overlap=100`).
+| `CHUNK_SIZE` | `500` | Target chunk size in characters |
+| `CHUNK_OVERLAP` | `100` | Overlap between adjacent chunks |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model |

@@ -51,18 +51,17 @@ HOW IT ALL FITS TOGETHER (the "RAG" pattern):
                    (with sources!)
 """
 
-import sys
-import os
-
-# Add project root to path
-sys.path.insert(0, os.path.dirname(__file__))
-
-from ingest import load_documents, chunk_documents
-from embed_and_store import create_vector_store
-from rag_chain import ask
-from dotenv import load_dotenv
-load_dotenv()
 import argparse
+import os
+import sys
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from rag_medical.embed_and_store import create_vector_store
+from rag_medical.ingest import chunk_documents, load_documents
+from rag_medical.rag_chain import ask
 
 
 def main():

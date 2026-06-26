@@ -23,15 +23,11 @@ No server needed — perfect for learning.
 """
 
 import os
+
 import chromadb
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 
-# We import from step 1
-from ingest import load_documents, chunk_documents
-
-# --- Configuration ---
-COLLECTION_NAME = "pancreatic_cancer_docs"
-PERSIST_DIR = "./chroma_db"  # Where ChromaDB saves its index to disk
+from rag_medical.config import COLLECTION_NAME, EMBEDDING_MODEL, PERSIST_DIR
 
 
 def get_embedding_function():
@@ -41,13 +37,10 @@ def get_embedding_function():
     """
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError(
-            "Set your OPENAI_API_KEY environment variable:\n"
-            "  export OPENAI_API_KEY='sk-...'"
-        )
+        raise ValueError("Set your OPENAI_API_KEY environment variable:\n  export OPENAI_API_KEY='sk-...'")
     return OpenAIEmbeddingFunction(
         api_key=api_key,
-        model_name="text-embedding-3-small",  # 1536 dimensions, $0.02/1M tokens
+        model_name=EMBEDDING_MODEL,
     )
 
 
@@ -87,27 +80,3 @@ def create_vector_store(chunks: list[dict]) -> chromadb.Collection:
 
     print(f"  Total vectors in store: {collection.count()}")
     return collection
-
-
-# --- Run standalone to test ---
-if __name__ == "__main__":
-    print("=== Loading & chunking ===")
-    docs = load_documents()
-    if not docs:
-        print("  No documents found in docs/. Add .txt files first.")
-        exit(1)
-
-    chunks = chunk_documents(docs)
-
-    print("\n=== Embedding & storing ===")
-    collection = create_vector_store(chunks)
-
-    # Quick test: query the store
-    print("\n=== Test query ===")
-    results = collection.query(
-        query_texts=["What are the symptoms of pancreatic cancer?"],
-        n_results=3,
-    )
-    for i, doc in enumerate(results["documents"][0]):
-        print(f"\n  Result {i+1} (distance: {results['distances'][0][i]:.3f}):")
-        print(f"  {doc[:150]}...")

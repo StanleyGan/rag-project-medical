@@ -23,5 +23,8 @@ docs/
 .vscode/
 *.swp
 
+# Eval results (regenerated per run)
+evals/results.json
+
 # OS
 .DS_Store

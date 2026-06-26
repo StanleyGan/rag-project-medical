@@ -1,0 +1,52 @@
+[
+  {
+    "question": "What percentage of pancreatic cancers are pancreatic ductal adenocarcinoma (PDAC)?",
+    "ground_truth": "Pancreatic ductal adenocarcinoma (PDAC) accounts for approximately 90% of all pancreatic cancers.",
+    "expected_sources": ["pancreatic_cancer_overview.txt"]
+  },
+  {
+    "question": "What is the most significant modifiable risk factor for pancreatic cancer?",
+    "ground_truth": "Smoking is the most significant modifiable risk factor, responsible for approximately 20-30% of pancreatic cancer cases.",
+    "expected_sources": ["pancreatic_cancer_overview.txt"]
+  },
+  {
+    "question": "What is the five-year survival rate for pancreatic cancer?",
+    "ground_truth": "The overall five-year survival rate for pancreatic cancer is approximately 13%.",
+    "expected_sources": ["treatment_and_prognosis.txt"]
+  },
+  {
+    "question": "What are the symptoms of pancreatic cancer?",
+    "ground_truth": "Common symptoms include jaundice, abdominal and back pain, unexplained weight loss, new-onset diabetes, digestive problems, blood clots, depression and fatigue.",
+    "expected_sources": ["symptoms_and_diagnosis.txt"]
+  },
+  {
+    "question": "What is the Whipple procedure?",
+    "ground_truth": "The Whipple procedure (pancreaticoduodenectomy) is the standard surgery for tumors in the head of the pancreas. It removes the head of the pancreas, duodenum, part of the bile duct, gallbladder, and sometimes part of the stomach.",
+    "expected_sources": ["treatment_and_prognosis.txt"]
+  },
+  {
+    "question": "What genetic mutations are associated with pancreatic cancer?",
+    "ground_truth": "Specific genetic mutations associated with hereditary pancreatic cancer include BRCA1, BRCA2, PALB2, ATM, and CDKN2A.",
+    "expected_sources": ["pancreatic_cancer_overview.txt", "1-s2.0-S0140673625002612-main.pdf", "nihms277358.pdf"]
+  },
+  {
+    "question": "What is the primary imaging tool for diagnosing pancreatic cancer?",
+    "ground_truth": "CT scan with contrast (pancreas protocol CT) is the primary imaging tool with a sensitivity of approximately 89-97% for detecting pancreatic cancer.",
+    "expected_sources": ["symptoms_and_diagnosis.txt"]
+  },
+  {
+    "question": "What chemotherapy regimens are used for metastatic pancreatic cancer?",
+    "ground_truth": "First-line regimens include FOLFIRINOX (median survival ~11 months), gemcitabine plus nab-paclitaxel (median survival ~8.5 months), and gemcitabine monotherapy (median survival ~5-7 months).",
+    "expected_sources": ["treatment_and_prognosis.txt"]
+  },
+  {
+    "question": "What is the role of immunotherapy in pancreatic cancer?",
+    "ground_truth": "Immunotherapy has shown limited success due to the immunosuppressive tumor microenvironment. Pembrolizumab is approved for the small subset (about 1%) with MSI-H or dMMR.",
+    "expected_sources": ["treatment_and_prognosis.txt"]
+  },
+  {
+    "question": "How does a Mediterranean diet affect pancreatic cancer risk?",
+    "ground_truth": "The documents do not contain information about Mediterranean diet and pancreatic cancer risk.",
+    "expected_sources": null
+  }
+]

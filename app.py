@@ -18,8 +18,10 @@ RUN:
 """
 
 import gradio as gr
-from rag_chain import get_collection, retrieve, format_context, generate_answer
 from dotenv import load_dotenv
+
+from rag_medical.rag_chain import format_context, generate_answer, get_collection, retrieve
+
 load_dotenv()
 
 

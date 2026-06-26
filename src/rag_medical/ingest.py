@@ -15,13 +15,17 @@ We use RecursiveCharacterTextSplitter because it tries to split on natural
 boundaries (paragraphs → sentences → words) before falling back to characters.
 """
 
-import os
 import glob
+import os
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from rag_medical.config import CHUNK_OVERLAP, CHUNK_SIZE
 
 # PDF support — install with: uv add pymupdf
 try:
     import fitz  # PyMuPDF
+
     PDF_SUPPORTED = True
 except ImportError:
     PDF_SUPPORTED = False
@@ -36,10 +40,7 @@ def load_pdf(filepath: str) -> str:
     on top of this — but most research papers are text-based PDFs.
     """
     if not PDF_SUPPORTED:
-        raise ImportError(
-            "PyMuPDF is required for PDF support. Install it:\n"
-            "  uv add pymupdf"
-        )
+        raise ImportError("PyMuPDF is required for PDF support. Install it:\n  uv add pymupdf")
     doc = fitz.open(filepath)
     text = ""
     for page in doc:
@@ -54,12 +55,14 @@ def load_documents(docs_dir: str = "docs") -> list[dict]:
 
     # Load .txt files
     for filepath in sorted(glob.glob(os.path.join(docs_dir, "*.txt"))):
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             text = f.read()
-        documents.append({
-            "text": text,
-            "source": os.path.basename(filepath),
-        })
+        documents.append(
+            {
+                "text": text,
+                "source": os.path.basename(filepath),
+            }
+        )
         print(f"  Loaded: {os.path.basename(filepath)} ({len(text):,} chars)")
 
     # Load .pdf files
@@ -69,10 +72,12 @@ def load_documents(docs_dir: str = "docs") -> list[dict]:
             continue
         text = load_pdf(filepath)
         if text:
-            documents.append({
-                "text": text,
-                "source": os.path.basename(filepath),
-            })
+            documents.append(
+                {
+                    "text": text,
+                    "source": os.path.basename(filepath),
+                }
+            )
             print(f"  Loaded: {os.path.basename(filepath)} ({len(text):,} chars)")
         else:
             print(f"  Skipped: {os.path.basename(filepath)} (no extractable text — may be scanned)")
@@ -82,8 +87,8 @@ def load_documents(docs_dir: str = "docs") -> list[dict]:
 
 def chunk_documents(
     documents: list[dict],
-    chunk_size: int = 500,
-    chunk_overlap: int = 100,
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap: int = CHUNK_OVERLAP,
 ) -> list[dict]:
     """
     Split documents into overlapping chunks.
@@ -108,24 +113,14 @@ def chunk_documents(
     for doc in documents:
         splits = splitter.split_text(doc["text"])
         for i, split_text in enumerate(splits):
-            chunks.append({
-                "text": split_text,
-                "source": doc["source"],
-                "chunk_id": f"{doc['source']}::chunk_{i}",
-            })
+            chunks.append(
+                {
+                    "text": split_text,
+                    "source": doc["source"],
+                    "chunk_id": f"{doc['source']}::chunk_{i}",
+                }
+            )
 
     print(f"\n  {len(documents)} document(s) → {len(chunks)} chunks")
     print(f"  Chunk size: ~{chunk_size} chars with {chunk_overlap} overlap")
     return chunks
-
-
-# --- Run standalone to test ---
-if __name__ == "__main__":
-    print("=== Loading documents ===")
-    docs = load_documents()
-    if not docs:
-        print("  No .txt files found in docs/. Add some and retry.")
-    else:
-        print("\n=== Chunking ===")
-        chunks = chunk_documents(docs)
-        print(f"\n  Sample chunk:\n  ---\n  {chunks[0]['text'][:200]}...\n  ---")

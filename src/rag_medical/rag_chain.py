@@ -28,17 +28,20 @@ This prevents hallucination — the #1 problem in naive LLM apps.
 """
 
 import os
-import tiktoken
+
 import chromadb
+import tiktoken
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from openai import OpenAI
 
-# --- Configuration ---
-COLLECTION_NAME = "pancreatic_cancer_docs"
-PERSIST_DIR = "./chroma_db"
-TOP_K = 4  # Number of chunks to retrieve
-MAX_HISTORY_TOKENS = 64000  #gpt-40-mini max token for context window is 128k. When history exceeds this, summarize it
-MODEL = "gpt-4.1-mini"
+from rag_medical.config import (
+    COLLECTION_NAME,
+    EMBEDDING_MODEL,
+    MAX_HISTORY_TOKENS,
+    MODEL,
+    PERSIST_DIR,
+    TOP_K,
+)
 
 # The system prompt that turns a plain LLM into a RAG assistant
 SYSTEM_PROMPT = """You are a helpful research assistant. Answer questions based ONLY on the provided context documents.
@@ -66,7 +69,7 @@ def get_collection() -> chromadb.Collection:
     client = chromadb.PersistentClient(path=PERSIST_DIR)
     embedding_fn = OpenAIEmbeddingFunction(
         api_key=os.environ.get("OPENAI_API_KEY"),
-        model_name="text-embedding-3-small",
+        model_name=EMBEDDING_MODEL,
     )
     return client.get_collection(
         name=COLLECTION_NAME,
@@ -89,11 +92,13 @@ def retrieve(collection, question: str, top_k: int = TOP_K) -> list[dict]:
     )
     retrieved = []
     for i in range(len(results["documents"][0])):
-        retrieved.append({
-            "text": results["documents"][0][i],
-            "source": results["metadatas"][0][i]["source"],
-            "distance": results["distances"][0][i],
-        })
+        retrieved.append(
+            {
+                "text": results["documents"][0][i],
+                "source": results["metadatas"][0][i]["source"],
+                "distance": results["distances"][0][i],
+            }
+        )
     return retrieved
 
 
@@ -156,17 +161,18 @@ def summarize_history(history: list[dict]) -> str:
     or keeping everything (blowing the token budget), we *distill* them.
     """
     client = OpenAI()
-    conversation_text = "\n".join(
-        f"{msg['role'].upper()}: {_get_text(msg['content'])}" for msg in history
-    )
+    conversation_text = "\n".join(f"{msg['role'].upper()}: {_get_text(msg['content'])}" for msg in history)
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": (
-                "Summarize this conversation concisely. Preserve key facts, "
-                "questions asked, and answers given. Focus on information the "
-                "user would need for follow-up questions."
-            )},
+            {
+                "role": "system",
+                "content": (
+                    "Summarize this conversation concisely. Preserve key facts, "
+                    "questions asked, and answers given. Focus on information the "
+                    "user would need for follow-up questions."
+                ),
+            },
             {"role": "user", "content": conversation_text},
         ],
         temperature=0.0,
@@ -228,10 +234,12 @@ def generate_answer(question: str, context: str, history: list[dict] | None = No
         messages.extend(prepare_history(history))
 
     # Add the current question with retrieved context
-    messages.append({
-        "role": "user",
-        "content": USER_PROMPT_TEMPLATE.format(context=context, question=question),
-    })
+    messages.append(
+        {
+            "role": "user",
+            "content": USER_PROMPT_TEMPLATE.format(context=context, question=question),
+        }
+    )
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -259,21 +267,3 @@ def ask(question: str) -> str:
     print("  Generating answer...")
     answer = generate_answer(question, context)
     return answer
-
-
-# --- Interactive mode ---
-if __name__ == "__main__":
-    print("=" * 60)
-    print("  RAG Q&A — Ask questions about your documents")
-    print("  Type 'quit' to exit")
-    print("=" * 60)
-
-    while True:
-        question = input("\nYour question: ").strip()
-        if question.lower() in ("quit", "exit", "q"):
-            break
-        if not question:
-            continue
-
-        answer = ask(question)
-        print(f"\n  Answer:\n  {answer}")
