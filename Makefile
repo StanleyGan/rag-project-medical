@@ -1,4 +1,4 @@
-.PHONY: install ingest serve run test eval lint format ci clean
+.PHONY: install ingest serve run test eval lint format ci docker-build docker-run clean
 
 install:
 	uv sync
@@ -27,6 +27,12 @@ format:
 	uv run ruff format .
 
 ci: lint test
+
+docker-build:
+	docker build -t rag-medical .
+
+docker-run:
+	docker run --rm -p 7860:7860 -e OPENAI_API_KEY -v ./docs:/app/docs -v ./chroma_db:/app/chroma_db rag-medical
 
 clean:
 	rm -rf chroma_db/

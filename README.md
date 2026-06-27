@@ -65,6 +65,7 @@ make serve      # or: uv run python app.py
 - **Gradio** — chat web UI
 - **PyMuPDF** — PDF text extraction
 - **LangChain** — text splitters only
+- **Langfuse** — observability and tracing (optional)
 
 ## Configuration
 
@@ -79,3 +80,17 @@ All settings are centralized in `src/rag_medical/config.py`:
 | `CHUNK_SIZE` | `500` | Target chunk size in characters |
 | `CHUNK_OVERLAP` | `100` | Overlap between adjacent chunks |
 | `EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model |
+
+## Observability (Langfuse)
+
+Every RAG query is traced automatically — retrieval, LLM calls, latency, and token usage. To enable:
+
+1. Create a free account at [cloud.langfuse.com](https://cloud.langfuse.com)
+2. Add to your `.env`:
+   ```
+   LANGFUSE_PUBLIC_KEY=pk-...
+   LANGFUSE_SECRET_KEY=sk-...
+   LANGFUSE_HOST=https://cloud.langfuse.com
+   ```
+
+Langfuse is optional — when the env vars are not set, tracing is a no-op and the app works normally.

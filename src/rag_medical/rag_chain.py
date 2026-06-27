@@ -32,7 +32,8 @@ import os
 import chromadb
 import tiktoken
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from openai import OpenAI
+from langfuse import get_client, observe
+from langfuse.openai import OpenAI
 
 from rag_medical.config import (
     COLLECTION_NAME,
@@ -43,8 +44,8 @@ from rag_medical.config import (
     TOP_K,
 )
 
-# The system prompt that turns a plain LLM into a RAG assistant
-SYSTEM_PROMPT = """You are a helpful research assistant. Answer questions based ONLY on the provided context documents.
+# Local fallback prompts — used when Langfuse prompt management is not configured
+_DEFAULT_SYSTEM_PROMPT = """You are a helpful research assistant. Answer questions based ONLY on the provided context documents.
 
 Rules:
 1. If the context doesn't contain enough information to answer, say "I don't have enough information in my documents to answer that."
@@ -53,15 +54,36 @@ Rules:
 4. If the context contains conflicting information, note the discrepancy.
 """
 
-# The user prompt template — {context} and {question} get filled in
-USER_PROMPT_TEMPLATE = """Context documents:
+_DEFAULT_USER_PROMPT_TEMPLATE = """Context documents:
 ---
-{context}
+{{context}}
 ---
 
-Question: {question}
+Question: {{question}}
 
 Answer based on the context above:"""
+
+langfuse = get_client()
+
+
+def get_prompts():
+    """
+    Fetch prompts from Langfuse if available, otherwise use local defaults.
+
+    Returns (system_text, user_template_text, prompt_object) where prompt_object
+    is the Langfuse user prompt object for linking to generations (None if using defaults).
+
+    To use Langfuse prompt management:
+    1. Create a text prompt named "rag-system-prompt" in Langfuse
+    2. Create a text prompt named "rag-user-prompt" with {{context}} and {{question}} variables
+    3. Label both as "production"
+    """
+    try:
+        system_obj = langfuse.get_prompt("rag-system-prompt")
+        user_obj = langfuse.get_prompt("rag-user-prompt")
+        return system_obj.compile(), user_obj.prompt, user_obj
+    except Exception:
+        return _DEFAULT_SYSTEM_PROMPT, _DEFAULT_USER_PROMPT_TEMPLATE, None
 
 
 def get_collection() -> chromadb.Collection:
@@ -77,6 +99,7 @@ def get_collection() -> chromadb.Collection:
     )
 
 
+@observe(as_type="retriever", name="retrieve_documents")
 def retrieve(collection, question: str, top_k: int = TOP_K) -> list[dict]:
     """
     Retrieve the top-k most relevant chunks for a question.
@@ -153,6 +176,7 @@ def count_tokens(messages: list[dict], model: str = MODEL) -> int:
     return total
 
 
+@observe(name="summarize_history")
 def summarize_history(history: list[dict]) -> str:
     """
     Ask the LLM to compress conversation history into a concise summary.
@@ -177,6 +201,7 @@ def summarize_history(history: list[dict]) -> str:
         ],
         temperature=0.0,
         max_tokens=300,
+        name="summarize_history",
     )
     return response.choices[0].message.content
 
@@ -214,6 +239,7 @@ def prepare_history(history: list[dict]) -> list[dict]:
     ]
 
 
+@observe(name="generate_answer")
 def generate_answer(question: str, context: str, history: list[dict] | None = None) -> str:
     """
     Call the LLM with the RAG prompt and conversation history.
@@ -225,19 +251,22 @@ def generate_answer(question: str, context: str, history: list[dict] | None = No
                   Will be summarized if it exceeds MAX_HISTORY_TOKENS.
     """
     client = OpenAI()
+    system_prompt, user_template, prompt_obj = get_prompts()
 
     # Build the messages list
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": system_prompt}]
 
     # Add conversation history (summarized if needed)
     if history:
         messages.extend(prepare_history(history))
 
     # Add the current question with retrieved context
+    # Langfuse templates use {{var}} mustache syntax; replace manually
+    user_content = user_template.replace("{{context}}", context).replace("{{question}}", question)
     messages.append(
         {
             "role": "user",
-            "content": USER_PROMPT_TEMPLATE.format(context=context, question=question),
+            "content": user_content,
         }
     )
 
@@ -245,10 +274,13 @@ def generate_answer(question: str, context: str, history: list[dict] | None = No
         model=MODEL,
         messages=messages,
         temperature=0.1,
+        name="rag_generation",
+        langfuse_prompt=prompt_obj,
     )
     return response.choices[0].message.content
 
 
+@observe(name="rag_pipeline")
 def ask(question: str) -> str:
     """Full RAG pipeline: retrieve → augment → generate."""
     print(f"\n  Question: {question}")
@@ -266,4 +298,8 @@ def ask(question: str) -> str:
     # Step 3: Generate
     print("  Generating answer...")
     answer = generate_answer(question, context)
+
+    # Flush traces to ensure delivery
+    get_client().flush()
+
     return answer
